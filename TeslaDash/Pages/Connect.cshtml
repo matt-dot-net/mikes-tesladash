@@ -1,0 +1,31 @@
+@page
+@model TeslaDash.Pages.ConnectModel
+@{ ViewData["Title"] = "Connect Tesla"; }
+
+<section class="connect card">
+    <p class="eyebrow">TESLA FLEET API</p>
+    <h1 class="connect-title">Connect your car</h1>
+    @if (!Model.Options.IsConfigured)
+    {
+        <div class="notice warning"><strong>Credentials needed</strong><p>Add the client ID and secret with .NET user-secrets, then restart the app.</p></div>
+        <pre><code>dotnet user-secrets set "Tesla:ClientId" "YOUR_CLIENT_ID" --project TeslaDash
+dotnet user-secrets set "Tesla:ClientSecret" "YOUR_CLIENT_SECRET" --project TeslaDash</code></pre>
+        <p>Register this exact callback URL in Tesla's Developer Portal:</p><pre><code>@Model.Options.RedirectUri</code></pre>
+    }
+    else if (!Model.IsConnected)
+    {
+        <p>This asks Tesla only for identity, offline refresh, and read-only vehicle information. It does not request commands or location.</p>
+        <form method="post" asp-page-handler="Connect"><button class="tesla-button" type="submit">Continue with Tesla</button></form>
+        <small>Callback: @Model.Options.RedirectUri</small>
+    }
+    else
+    {
+        <div class="notice success"><strong>Connected</strong><p>Your refresh token is encrypted at rest using ASP.NET Core Data Protection.</p></div>
+        @if (Model.Error is not null) { <div class="notice warning"><strong>Fleet API error</strong><p>@Model.Error</p></div> }
+        @foreach (var vehicle in Model.Vehicles)
+        {
+            <div class="vehicle-row"><div><strong>@vehicle.DisplayName</strong><small>VIN ending @vehicle.Vin[^6..]</small></div><span class="pill">@vehicle.State</span></div>
+        }
+        <form method="post" asp-page-handler="Disconnect"><button class="secondary-button" type="submit">Disconnect locally</button></form>
+    }
+</section>
