@@ -13,6 +13,8 @@ public sealed class TeslaVehicleDashboardService(TeslaFleetClient fleetClient) :
         var data = await fleetClient.GetVehicleDataAsync(vehicle.Id, cancellationToken);
         var charge = data.ChargeState;
         var vehicleState = data.VehicleState;
+        var latitude = data.LocationData?.Latitude ?? data.DriveState?.Latitude;
+        var longitude = data.LocationData?.Longitude ?? data.DriveState?.Longitude;
         var isCharging = string.Equals(charge?.ChargingState, "Charging", StringComparison.OrdinalIgnoreCase);
 
         return new DashboardSnapshot(
@@ -32,7 +34,9 @@ public sealed class TeslaVehicleDashboardService(TeslaFleetClient fleetClient) :
                     charge?.MinutesToFullCharge ?? 0,
                     0)
                 : null,
-            []);
+            [],
+            latitude,
+            longitude);
     }
 
     private static string FormatState(string state) => state.ToLowerInvariant() switch

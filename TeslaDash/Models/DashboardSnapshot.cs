@@ -2,7 +2,8 @@ namespace TeslaDash.Models;
 
 public sealed record DashboardSnapshot(string VehicleName, string ConnectionState, int StateOfCharge,
     int ChargeLimit, int EstimatedRangeMiles, string SoftwareVersion, string FsdVersion,
-    decimal MilesDriven, decimal FsdMiles, ChargeSession? ActiveCharge, IReadOnlyList<ActivityEvent> RecentEvents)
+    decimal MilesDriven, decimal FsdMiles, ChargeSession? ActiveCharge, IReadOnlyList<ActivityEvent> RecentEvents,
+    double? Latitude = null, double? Longitude = null)
 {
     public decimal FsdPercent => MilesDriven <= 0 ? 0 : Math.Round(FsdMiles / MilesDriven * 100, 1);
 }

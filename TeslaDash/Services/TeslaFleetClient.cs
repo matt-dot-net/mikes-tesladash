@@ -26,7 +26,7 @@ public sealed class TeslaFleetClient(HttpClient httpClient, TeslaOAuthClient oau
         var baseUrl = _options.FleetApiBaseUrl.TrimEnd('/');
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"{baseUrl}/api/1/vehicles/{vehicleId}/vehicle_data?endpoints=charge_state;vehicle_state");
+            $"{baseUrl}/api/1/vehicles/{vehicleId}/vehicle_data");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
         using var response = await httpClient.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
@@ -63,7 +63,9 @@ public sealed record TeslaVehicleData(
     [property: JsonPropertyName("display_name")] string DisplayName,
     [property: JsonPropertyName("state")] string State,
     [property: JsonPropertyName("charge_state")] TeslaChargeState? ChargeState,
-    [property: JsonPropertyName("vehicle_state")] TeslaVehicleState? VehicleState);
+    [property: JsonPropertyName("vehicle_state")] TeslaVehicleState? VehicleState,
+    [property: JsonPropertyName("drive_state")] TeslaDriveState? DriveState,
+    [property: JsonPropertyName("location_data")] TeslaLocationData? LocationData);
 public sealed record TeslaChargeState(
     [property: JsonPropertyName("battery_level")] int BatteryLevel,
     [property: JsonPropertyName("battery_range")] double BatteryRange,
@@ -75,6 +77,12 @@ public sealed record TeslaChargeState(
 public sealed record TeslaVehicleState(
     [property: JsonPropertyName("car_version")] string? CarVersion,
     [property: JsonPropertyName("odometer")] double Odometer);
+public sealed record TeslaDriveState(
+    [property: JsonPropertyName("latitude")] double? Latitude,
+    [property: JsonPropertyName("longitude")] double? Longitude);
+public sealed record TeslaLocationData(
+    [property: JsonPropertyName("latitude")] double? Latitude,
+    [property: JsonPropertyName("longitude")] double? Longitude);
 public sealed record TeslaCommandEnvelope([property: JsonPropertyName("response")] TeslaCommandResponse Response);
 public sealed record TeslaCommandResponse(
     [property: JsonPropertyName("result")] bool Result,
