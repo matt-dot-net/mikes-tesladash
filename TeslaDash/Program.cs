@@ -50,7 +50,7 @@ builder.Services
         options.Scope.Add("profile");
         options.Scope.Add("email");
     });
-builder.Services.AddSingleton<TeslaDash.Services.IVehicleDashboardService, TeslaDash.Services.DemoVehicleDashboardService>();
+builder.Services.AddSingleton<IVehicleDashboardService, TeslaVehicleDashboardService>();
 builder.Services.AddDataProtection()
     .SetApplicationName("TeslaDash")
     .PersistKeysToFileSystem(new DirectoryInfo(builder.Configuration["Tesla:DataProtectionPath"] ?? Path.Combine(builder.Environment.ContentRootPath, "data", "keys")));

@@ -2,14 +2,26 @@
 @model IndexModel
 @{ ViewData["Title"] = "Garage"; }
 
-<section class="hero">
-    <div><p class="eyebrow">MY GARAGE</p><h1>@Model.Snapshot.VehicleName</h1><p class="status"><span></span>@Model.Snapshot.ConnectionState</p></div>
-    <div class="battery" aria-label="Battery at @Model.Snapshot.StateOfCharge percent"><div class="battery-fill" style="width:@Model.Snapshot.StateOfCharge%"></div><strong>@Model.Snapshot.StateOfCharge%</strong></div>
-</section>
-<section class="metric-grid">
-    <article class="card accent-card"><p class="eyebrow">FSD SHARE</p><div class="ring" style="--value:@Model.Snapshot.FsdPercent"><span>@Model.Snapshot.FsdPercent%</span></div><p>@Model.Snapshot.FsdMiles.ToString("N0") of @Model.Snapshot.MilesDriven.ToString("N0") miles</p><small>@Model.Snapshot.FsdVersion</small></article>
-    <article class="card"><p class="eyebrow">CHARGING NOW</p>@if(Model.Snapshot.ActiveCharge is {} charge){<h2>@charge.RateKw kW</h2><p>@charge.AddedKwh kWh added · @charge.MinutesRemaining min remaining</p><div class="progress"><i style="width:@Model.Snapshot.StateOfCharge%"></i></div><small>Limit @Model.Snapshot.ChargeLimit% · est. $@charge.EstimatedCost</small>}</article>
-    <article class="card"><p class="eyebrow">SOFTWARE</p><h2>@Model.Snapshot.SoftwareVersion</h2><p>@Model.Snapshot.FsdVersion</p><span class="pill">Up to date</span></article>
-    <article class="card"><p class="eyebrow">ESTIMATED RANGE</p><h2>@Model.Snapshot.EstimatedRangeMiles mi</h2><p>at @Model.Snapshot.StateOfCharge% state of charge</p></article>
-</section>
-<section class="timeline card"><div class="section-heading"><div><p class="eyebrow">RECENT ACTIVITY</p><h2>The latest from your car</h2></div><span>Demo data</span></div>@foreach(var item in Model.Snapshot.RecentEvents){<div class="event"><i class="event-icon @item.Kind"></i><div><strong>@item.Message</strong><small>@item.OccurredAt.ToString("ddd, h:mm tt")</small></div></div>}</section>
+@if (Model.Snapshot is not { } snapshot)
+{
+    <section class="connect card">
+        <p class="eyebrow">TESLA FLEET API</p>
+        <h1 class="connect-title">Connect your garage</h1>
+        <div class="notice warning"><strong>Vehicle data unavailable</strong><p>@Model.Error</p></div>
+        <a class="tesla-button" asp-page="/Connect">Open Tesla connection</a>
+    </section>
+}
+else
+{
+    <section class="hero">
+        <div><p class="eyebrow">MY GARAGE</p><h1>@snapshot.VehicleName</h1><p class="status"><span></span>@snapshot.ConnectionState</p></div>
+        <div class="battery" aria-label="Battery at @snapshot.StateOfCharge percent"><div class="battery-fill" style="width:@snapshot.StateOfCharge%"></div><strong>@snapshot.StateOfCharge%</strong></div>
+    </section>
+    <section class="metric-grid">
+        <article class="card accent-card"><p class="eyebrow">ODOMETER</p><h2>@snapshot.MilesDriven.ToString("N0") mi</h2><p>Current vehicle mileage</p><small>Live Fleet API data</small></article>
+        <article class="card"><p class="eyebrow">CHARGING</p>@if(snapshot.ActiveCharge is {} charge){<h2>@charge.RateKw kW</h2><p>@charge.AddedKwh kWh added · @charge.MinutesRemaining min remaining</p><div class="progress"><i style="width:@snapshot.StateOfCharge%"></i></div><small>Limit @snapshot.ChargeLimit%</small>}else{<h2>Not charging</h2><p>Charge limit @snapshot.ChargeLimit%</p>}</article>
+        <article class="card"><p class="eyebrow">SOFTWARE</p><h2>@snapshot.SoftwareVersion</h2><p>Installed vehicle software</p><span class="pill">Fleet API</span></article>
+        <article class="card"><p class="eyebrow">ESTIMATED RANGE</p><h2>@snapshot.EstimatedRangeMiles mi</h2><p>at @snapshot.StateOfCharge% state of charge</p></article>
+    </section>
+    <section class="timeline card"><div class="section-heading"><div><p class="eyebrow">FSD &amp; ACTIVITY</p><h2>History is not tracked yet</h2></div><span>Fleet Telemetry needed</span></div><p>FSD share, drives, charging history, and recent events require Fleet Telemetry ingestion and persistent storage. The values above come directly from the current vehicle-data response.</p></section>
+}
