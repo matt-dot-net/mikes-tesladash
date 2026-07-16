@@ -16,6 +16,19 @@ if ([string]::IsNullOrWhiteSpace($env:MICROSOFT_CLIENT_ID)) { throw "Set MICROSO
 if ([string]::IsNullOrWhiteSpace($env:MICROSOFT_CLIENT_SECRET)) { throw "Set MICROSOFT_CLIENT_SECRET in this PowerShell session." }
 if (-not (Test-Path -LiteralPath $PrivateKeyPath)) { throw "Tesla private key not found. Run scripts/New-TeslaKeyPair.ps1 first." }
 
+# The Windows az.cmd launcher passes arguments through cmd.exe, which corrupts
+# secrets containing shell metacharacters such as '&'. Invoke the CLI's Python
+# entry point directly so secret values remain a single literal argument.
+$azApplication = Get-Command az -CommandType Application -ErrorAction Stop
+if ($azApplication.Source.EndsWith(".cmd", [StringComparison]::OrdinalIgnoreCase)) {
+    $script:AzureCliPython = [IO.Path]::GetFullPath((Join-Path (Split-Path $azApplication.Source) "..\python.exe"))
+    if (-not (Test-Path -LiteralPath $script:AzureCliPython)) {
+        throw "Azure CLI Python executable was not found at $script:AzureCliPython."
+    }
+
+    function az { & $script:AzureCliPython -IBm azure.cli @args }
+}
+
 az extension add --name containerapp --upgrade --only-show-errors
 az provider register --namespace Microsoft.App --wait
 az provider register --namespace Microsoft.OperationalInsights --wait
