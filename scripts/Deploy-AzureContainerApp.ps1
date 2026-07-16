@@ -4,7 +4,7 @@ param(
     [string]$Location = "eastus",
     [string]$AppName = "tesladash",
     [string]$EnvironmentName = "tesladash-env",
-    [string]$ImageTag = "latest",
+    [string]$ImageTag = (Get-Date -Format "yyyyMMddHHmmss"),
     [string]$PrivateKeyPath = (Join-Path $PSScriptRoot "..\TeslaDash\data\private-key.pem")
 )
 
@@ -60,11 +60,11 @@ az acr build --registry $AcrName --image "tesladash:$ImageTag" --file Dockerfile
 $privateKeyBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([IO.File]::ReadAllText((Resolve-Path $PrivateKeyPath))))
 $appExists = az containerapp list --resource-group $ResourceGroup --query "[?name=='$AppName'].name | [0]" --output tsv --only-show-errors
 if (-not $appExists) {
-    az containerapp create --name $AppName --resource-group $ResourceGroup --environment $EnvironmentName --image $image --target-port 8080 --ingress external --min-replicas 1 --max-replicas 1 --user-assigned $identityId --registry-server $registryServer --registry-identity $identityId --secrets "tesla-client-secret=$env:TESLA_CLIENT_SECRET" "tesla-private-key=$privateKeyBase64" "microsoft-client-secret=$env:MICROSOFT_CLIENT_SECRET" --env-vars "Tesla__ClientId=$env:TESLA_CLIENT_ID" "Tesla__ClientSecret=secretref:tesla-client-secret" "Tesla__PrivateKeyBase64=secretref:tesla-private-key" "Authentication__Microsoft__TenantId=$env:MICROSOFT_TENANT_ID" "Authentication__Microsoft__ClientId=$env:MICROSOFT_CLIENT_ID" "Authentication__Microsoft__ClientSecret=secretref:microsoft-client-secret" "ASPNETCORE_ENVIRONMENT=Production" --output none --only-show-errors
+    az containerapp create --name $AppName --resource-group $ResourceGroup --environment $EnvironmentName --image $image --target-port 8080 --ingress external --min-replicas 1 --max-replicas 1 --user-assigned $identityId --registry-server $registryServer --registry-identity $identityId --secrets "tesla-client-secret=$env:TESLA_CLIENT_SECRET" "tesla-private-key=$privateKeyBase64" "microsoft-client-secret=$env:MICROSOFT_CLIENT_SECRET" --env-vars "Tesla__ClientId=$env:TESLA_CLIENT_ID" "Tesla__ClientSecret=secretref:tesla-client-secret" "Tesla__PrivateKeyBase64=secretref:tesla-private-key" "Tesla__TokenPath=/data/tesla-tokens.protected" "Tesla__DataProtectionPath=/data/keys" "Authentication__Microsoft__TenantId=$env:MICROSOFT_TENANT_ID" "Authentication__Microsoft__ClientId=$env:MICROSOFT_CLIENT_ID" "Authentication__Microsoft__ClientSecret=secretref:microsoft-client-secret" "ASPNETCORE_ENVIRONMENT=Production" --output none --only-show-errors
 }
 else {
     az containerapp secret set --name $AppName --resource-group $ResourceGroup --secrets "tesla-client-secret=$env:TESLA_CLIENT_SECRET" "tesla-private-key=$privateKeyBase64" "microsoft-client-secret=$env:MICROSOFT_CLIENT_SECRET" --output none --only-show-errors
-    az containerapp update --name $AppName --resource-group $ResourceGroup --image $image --set-env-vars "Tesla__ClientId=$env:TESLA_CLIENT_ID" "Tesla__ClientSecret=secretref:tesla-client-secret" "Tesla__PrivateKeyBase64=secretref:tesla-private-key" "Authentication__Microsoft__TenantId=$env:MICROSOFT_TENANT_ID" "Authentication__Microsoft__ClientId=$env:MICROSOFT_CLIENT_ID" "Authentication__Microsoft__ClientSecret=secretref:microsoft-client-secret" --output none --only-show-errors
+    az containerapp update --name $AppName --resource-group $ResourceGroup --image $image --set-env-vars "Tesla__ClientId=$env:TESLA_CLIENT_ID" "Tesla__ClientSecret=secretref:tesla-client-secret" "Tesla__PrivateKeyBase64=secretref:tesla-private-key" "Tesla__TokenPath=/data/tesla-tokens.protected" "Tesla__DataProtectionPath=/data/keys" "Authentication__Microsoft__TenantId=$env:MICROSOFT_TENANT_ID" "Authentication__Microsoft__ClientId=$env:MICROSOFT_CLIENT_ID" "Authentication__Microsoft__ClientSecret=secretref:microsoft-client-secret" --output none --only-show-errors
 }
 
 $fqdn = az containerapp show --name $AppName --resource-group $ResourceGroup --query properties.configuration.ingress.fqdn --output tsv --only-show-errors
