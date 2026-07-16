@@ -11,6 +11,9 @@ param(
 $ErrorActionPreference = "Stop"
 if ([string]::IsNullOrWhiteSpace($env:TESLA_CLIENT_ID)) { throw "Set TESLA_CLIENT_ID in this PowerShell session." }
 if ([string]::IsNullOrWhiteSpace($env:TESLA_CLIENT_SECRET)) { throw "Set TESLA_CLIENT_SECRET in this PowerShell session." }
+if ([string]::IsNullOrWhiteSpace($env:MICROSOFT_TENANT_ID)) { throw "Set MICROSOFT_TENANT_ID in this PowerShell session." }
+if ([string]::IsNullOrWhiteSpace($env:MICROSOFT_CLIENT_ID)) { throw "Set MICROSOFT_CLIENT_ID in this PowerShell session." }
+if ([string]::IsNullOrWhiteSpace($env:MICROSOFT_CLIENT_SECRET)) { throw "Set MICROSOFT_CLIENT_SECRET in this PowerShell session." }
 if (-not (Test-Path -LiteralPath $PrivateKeyPath)) { throw "Tesla private key not found. Run scripts/New-TeslaKeyPair.ps1 first." }
 
 az extension add --name containerapp --upgrade --only-show-errors
@@ -18,13 +21,13 @@ az provider register --namespace Microsoft.App --wait
 az provider register --namespace Microsoft.OperationalInsights --wait
 az group create --name $ResourceGroup --location $Location --output none
 
-$environmentExists = az containerapp env show --name $EnvironmentName --resource-group $ResourceGroup --query name --output tsv 2>$null
+$environmentExists = az containerapp env list --resource-group $ResourceGroup --query "[?name=='$EnvironmentName'].name | [0]" --output tsv --only-show-errors
 if (-not $environmentExists) {
     az containerapp env create --name $EnvironmentName --resource-group $ResourceGroup --location $Location --output none
 }
 
 $identityName = "$AppName-pull"
-$identityExists = az identity show --name $identityName --resource-group $ResourceGroup --query id --output tsv 2>$null
+$identityExists = az identity list --resource-group $ResourceGroup --query "[?name=='$identityName'].id | [0]" --output tsv --only-show-errors
 if (-not $identityExists) {
     az identity create --name $identityName --resource-group $ResourceGroup --location $Location --output none
 }
@@ -42,21 +45,26 @@ $image = "$registryServer/tesladash:$ImageTag"
 az acr build --registry $AcrName --image "tesladash:$ImageTag" --file Dockerfile .
 
 $privateKeyBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([IO.File]::ReadAllText((Resolve-Path $PrivateKeyPath))))
-$appExists = az containerapp show --name $AppName --resource-group $ResourceGroup --query name --output tsv 2>$null
+$appExists = az containerapp list --resource-group $ResourceGroup --query "[?name=='$AppName'].name | [0]" --output tsv --only-show-errors
 if (-not $appExists) {
-    az containerapp create --name $AppName --resource-group $ResourceGroup --environment $EnvironmentName --image $image --target-port 8080 --ingress external --min-replicas 1 --max-replicas 1 --user-assigned $identityId --registry-server $registryServer --registry-identity $identityId --secrets "tesla-client-secret=$env:TESLA_CLIENT_SECRET" "tesla-private-key=$privateKeyBase64" --env-vars "Tesla__ClientId=$env:TESLA_CLIENT_ID" "Tesla__ClientSecret=secretref:tesla-client-secret" "Tesla__PrivateKeyBase64=secretref:tesla-private-key" "ASPNETCORE_ENVIRONMENT=Production" --output none
+    az containerapp create --name $AppName --resource-group $ResourceGroup --environment $EnvironmentName --image $image --target-port 8080 --ingress external --min-replicas 1 --max-replicas 1 --user-assigned $identityId --registry-server $registryServer --registry-identity $identityId --secrets "tesla-client-secret=$env:TESLA_CLIENT_SECRET" "tesla-private-key=$privateKeyBase64" "microsoft-client-secret=$env:MICROSOFT_CLIENT_SECRET" --env-vars "Tesla__ClientId=$env:TESLA_CLIENT_ID" "Tesla__ClientSecret=secretref:tesla-client-secret" "Tesla__PrivateKeyBase64=secretref:tesla-private-key" "Authentication__Microsoft__TenantId=$env:MICROSOFT_TENANT_ID" "Authentication__Microsoft__ClientId=$env:MICROSOFT_CLIENT_ID" "Authentication__Microsoft__ClientSecret=secretref:microsoft-client-secret" "ASPNETCORE_ENVIRONMENT=Production" --output none
 }
 else {
-    az containerapp secret set --name $AppName --resource-group $ResourceGroup --secrets "tesla-client-secret=$env:TESLA_CLIENT_SECRET" "tesla-private-key=$privateKeyBase64" --output none
-    az containerapp update --name $AppName --resource-group $ResourceGroup --image $image --set-env-vars "Tesla__ClientId=$env:TESLA_CLIENT_ID" "Tesla__ClientSecret=secretref:tesla-client-secret" "Tesla__PrivateKeyBase64=secretref:tesla-private-key" --output none
+    az containerapp secret set --name $AppName --resource-group $ResourceGroup --secrets "tesla-client-secret=$env:TESLA_CLIENT_SECRET" "tesla-private-key=$privateKeyBase64" "microsoft-client-secret=$env:MICROSOFT_CLIENT_SECRET" --output none
+    az containerapp update --name $AppName --resource-group $ResourceGroup --image $image --set-env-vars "Tesla__ClientId=$env:TESLA_CLIENT_ID" "Tesla__ClientSecret=secretref:tesla-client-secret" "Tesla__PrivateKeyBase64=secretref:tesla-private-key" "Authentication__Microsoft__TenantId=$env:MICROSOFT_TENANT_ID" "Authentication__Microsoft__ClientId=$env:MICROSOFT_CLIENT_ID" "Authentication__Microsoft__ClientSecret=secretref:microsoft-client-secret" --output none
 }
 
 $fqdn = az containerapp show --name $AppName --resource-group $ResourceGroup --query properties.configuration.ingress.fqdn --output tsv
 $redirectUri = "https://$fqdn/Auth/Callback"
+$oidcSignInUri = "https://$fqdn/signin-oidc"
+$oidcSignOutUri = "https://$fqdn/signout-callback-oidc"
 az containerapp update --name $AppName --resource-group $ResourceGroup --set-env-vars "Tesla__RedirectUri=$redirectUri" --output none
 
 Write-Host "Deployment complete."
 Write-Host "Origin:       https://$fqdn"
 Write-Host "Redirect URI: $redirectUri"
 Write-Host "Public key:   https://$fqdn/.well-known/appspecific/com.tesla.3p.public-key.pem"
+Write-Host "OIDC sign-in: $oidcSignInUri"
+Write-Host "OIDC sign-out:$oidcSignOutUri"
 Write-Host "Update these URLs in the Tesla Developer Portal before connecting."
+Write-Host "Add the OIDC URLs as Web redirect URIs in the Microsoft Entra app registration."

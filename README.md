@@ -34,6 +34,9 @@ az login
 
 $env:TESLA_CLIENT_ID = "YOUR_CLIENT_ID"
 $env:TESLA_CLIENT_SECRET = Read-Host "Tesla client secret"
+$env:MICROSOFT_TENANT_ID = "YOUR_ENTRA_TENANT_ID"
+$env:MICROSOFT_CLIENT_ID = "YOUR_ENTRA_APPLICATION_CLIENT_ID"
+$env:MICROSOFT_CLIENT_SECRET = Read-Host "Microsoft client secret"
 
 ./scripts/Deploy-AzureContainerApp.ps1 `
   -ResourceGroup "YOUR_RESOURCE_GROUP" `
@@ -42,7 +45,7 @@ $env:TESLA_CLIENT_SECRET = Read-Host "Tesla client secret"
   -AppName "tesladash"
 ```
 
-The script prints the Allowed Origin, Redirect URI, and well-known public-key URL. Put the first two into the Tesla Developer Portal and verify the public-key URL returns a PEM key. The local private-key file is Git-ignored; back it up securely and never commit it.
+The script prints the Tesla Allowed Origin, redirect URI, well-known public-key URL, and Microsoft OIDC callback URLs. Add the OIDC URLs as Web redirect URIs in the Entra app registration. The local private-key file is Git-ignored; back it up securely and never commit it.
 
 The initial deployment runs one replica but still stores OAuth tokens and ASP.NET Data Protection keys on container-local storage. A restart or new revision can require reconnecting Tesla. Add durable Azure storage before treating this as production.
 
