@@ -9,6 +9,7 @@ public sealed class TeslaOptions
     public string FleetApiBaseUrl { get; init; } = "https://fleet-api.prd.na.vn.cloud.tesla.com";
     public string Scopes { get; init; } = "openid offline_access vehicle_device_data";
     public string TokenPath { get; init; } = "data/tesla-tokens.protected";
+    public string PrivateKeyBase64 { get; init; } = "";
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
 }

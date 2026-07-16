@@ -24,6 +24,28 @@ dotnet run --project TeslaDash --urls http://localhost:5187
 
 Open `/Connect`, choose **Continue with Tesla**, and approve the read-only scopes. Tokens are encrypted with ASP.NET Core Data Protection; the protected token and encryption keys live under `TeslaDash/data`, which is ignored by Git. In production, use HTTPS, secure secret injection, persistent `/data`, and protected backups.
 
+## Deploy to Azure Container Apps
+
+The deployment script uses an existing Azure Container Registry, creates a Container Apps environment and pull identity, builds the image with ACR Tasks, injects Tesla credentials as Container Apps secrets, and prints the public URLs required by Tesla.
+
+```powershell
+az login
+./scripts/New-TeslaKeyPair.ps1
+
+$env:TESLA_CLIENT_ID = "YOUR_CLIENT_ID"
+$env:TESLA_CLIENT_SECRET = Read-Host "Tesla client secret"
+
+./scripts/Deploy-AzureContainerApp.ps1 `
+  -ResourceGroup "YOUR_RESOURCE_GROUP" `
+  -AcrName "YOUR_ACR_NAME" `
+  -Location "eastus" `
+  -AppName "tesladash"
+```
+
+The script prints the Allowed Origin, Redirect URI, and well-known public-key URL. Put the first two into the Tesla Developer Portal and verify the public-key URL returns a PEM key. The local private-key file is Git-ignored; back it up securely and never commit it.
+
+The initial deployment runs one replica but still stores OAuth tokens and ASP.NET Data Protection keys on container-local storage. A restart or new revision can require reconnecting Tesla. Add durable Azure storage before treating this as production.
+
 ## Roadmap
 
 - Live state without unnecessary vehicle wake-ups
