@@ -47,6 +47,13 @@ $env:MICROSOFT_CLIENT_SECRET = Read-Host "Microsoft client secret"
 
 The script prints the Tesla Allowed Origin, redirect URI, well-known public-key URL, and Microsoft OIDC callback URLs. Add the OIDC URLs as Web redirect URIs in the Entra app registration. The local private-key file is Git-ignored; back it up securely and never commit it.
 
+Register the deployed domain with Tesla once per Fleet API region before listing vehicles:
+
+```powershell
+./scripts/Register-TeslaPartner.ps1 `
+  -Domain "tesladash.example.azurecontainerapps.io"
+```
+
 The initial deployment runs one replica but still stores OAuth tokens and ASP.NET Data Protection keys on container-local storage. A restart or new revision can require reconnecting Tesla. Add durable Azure storage before treating this as production.
 
 ## Roadmap
