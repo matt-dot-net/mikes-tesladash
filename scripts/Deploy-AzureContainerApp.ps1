@@ -19,7 +19,7 @@ if (-not (Test-Path -LiteralPath $PrivateKeyPath)) { throw "Tesla private key no
 # The Windows az.cmd launcher passes arguments through cmd.exe, which corrupts
 # secrets containing shell metacharacters such as '&'. Invoke the CLI's Python
 # entry point directly so secret values remain a single literal argument.
-$azApplication = Get-Command az -CommandType Application -ErrorAction Stop
+$azApplication = Get-Command az -CommandType Application -ErrorAction Stop | Select-Object -First 1
 if ($azApplication.Source.EndsWith(".cmd", [StringComparison]::OrdinalIgnoreCase)) {
     $script:AzureCliPython = [IO.Path]::GetFullPath((Join-Path (Split-Path $azApplication.Source) "..\python.exe"))
     if (-not (Test-Path -LiteralPath $script:AzureCliPython)) {
