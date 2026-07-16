@@ -34,6 +34,25 @@ public sealed class TeslaFleetClient(HttpClient httpClient, TeslaOAuthClient oau
         return (await response.Content.ReadFromJsonAsync<TeslaVehicleDataEnvelope>(cancellationToken))?.Response
             ?? throw new HttpRequestException("Tesla Fleet API returned no vehicle data.");
     }
+
+    public async Task RemoteBoomboxAsync(long vehicleId, CancellationToken cancellationToken = default)
+    {
+        var token = await oauthClient.GetValidTokenAsync(cancellationToken) ?? throw new InvalidOperationException("Tesla is not connected.");
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"{_options.FleetApiBaseUrl.TrimEnd('/')}/api/1/vehicles/{vehicleId}/command/remote_boombox")
+        {
+            Content = JsonContent.Create(new { sound = 0 })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"Tesla Fleet API failed ({(int)response.StatusCode}): {await response.Content.ReadAsStringAsync(cancellationToken)}");
+
+        var result = await response.Content.ReadFromJsonAsync<TeslaCommandEnvelope>(cancellationToken);
+        if (result?.Response.Result != true)
+            throw new InvalidOperationException(result?.Response.Reason ?? "Tesla rejected the Remote Boombox command.");
+    }
 }
 
 public sealed record TeslaVehicle([property: JsonPropertyName("id")] long Id, [property: JsonPropertyName("vin")] string Vin,
@@ -56,3 +75,7 @@ public sealed record TeslaChargeState(
 public sealed record TeslaVehicleState(
     [property: JsonPropertyName("car_version")] string? CarVersion,
     [property: JsonPropertyName("odometer")] double Odometer);
+public sealed record TeslaCommandEnvelope([property: JsonPropertyName("response")] TeslaCommandResponse Response);
+public sealed record TeslaCommandResponse(
+    [property: JsonPropertyName("result")] bool Result,
+    [property: JsonPropertyName("reason")] string? Reason);

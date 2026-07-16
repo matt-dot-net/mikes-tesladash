@@ -13,9 +13,19 @@
 }
 else
 {
+    @if (Model.CommandMessage is not null)
+    {
+        <div class="notice warning"><strong>Vehicle command</strong><p>@Model.CommandMessage</p></div>
+    }
     <section class="hero">
         <div><p class="eyebrow">MY GARAGE</p><h1>@snapshot.VehicleName</h1><p class="status"><span></span>@snapshot.ConnectionState</p></div>
         <div class="battery" aria-label="Battery at @snapshot.StateOfCharge percent"><div class="battery-fill" style="width:@snapshot.StateOfCharge%"></div><strong>@snapshot.StateOfCharge%</strong></div>
+    </section>
+    <section class="command-bar card">
+        <div><p class="eyebrow">REMOTE BOOMBOX</p><h2>Emissions test</h2><p>Plays the fart sound through the vehicle's external speaker.</p></div>
+        <form method="post" asp-page-handler="Fart" onsubmit="return confirm('Play the fart sound on the vehicle?');">
+            <button class="fart-button" type="submit">💨 Make it fart</button>
+        </form>
     </section>
     <section class="metric-grid">
         <article class="card accent-card"><p class="eyebrow">ODOMETER</p><h2>@snapshot.MilesDriven.ToString("N0") mi</h2><p>Current vehicle mileage</p><small>Live Fleet API data</small></article>
